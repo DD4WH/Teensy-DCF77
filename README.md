@@ -1,7 +1,7 @@
 # Teensy-DCF77
 
 Based on an idea by Frank Boesing
-
+![](https://github.com/DD4WH/Teensy-DCF77/blob/master/IMG_2188.JPG)
 HARDWARE (Option 1 - very low budget < 1$/€):
 - a few meters of wire soldered to the MIC INPUT (optionally add a 100nF cap)
 - connect GND of the MIC input to a ground connection (the heating for example): NEVER EVER USE THE GND CONNECTION OF YOUR MAINS CONNECTOR! (Do not even think about that!)
@@ -13,7 +13,7 @@ HARDWARE (Option 2 - low budget < 5$/€)
 should be in the range of a few nF
 - connect the parallel circuit to the MIC input and MIC GND
 --> this works very well here about 500km from Frankfurt inside a building with fairly high noise level
-
+![](https://github.com/DD4WH/Teensy-DCF77/blob/master/IMG_2183.JPG)
 HARDWARE (Option 3 - about 10$ / €)
 - buy a DCF77 receive module and connect the output to the Teensy LINEIN
 --> this should be a bullet-proof solution, if you are inside the 2000km circle around Frankfurt
