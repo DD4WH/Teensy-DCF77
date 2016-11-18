@@ -1,1 +1,29 @@
 # Teensy-DCF77
+
+Based on an idea by Frank Boesing
+
+HARDWARE (Option 1 - very low budget < 1$/€):
+- a few meters of wire soldered to the MIC INPUT (optionally add a 100nF cap)
+- connect GND of the MIC input to a ground connection (the heating for example): NEVER EVER USE THE GND CONNECTION OF YOUR MAINS CONNECTOR! (Do not even think about that!)
+--> this option could possibly not work, if you are too far away from Frankfurt or have too much local noise from all your plasma TVs, switching power supplies etc.
+
+HARDWARE (Option 2 - low budget < 5$/€)
+- ferrite rod with a few hundred windings --> measure inductance L
+- choose parallel capacitor with capacitance C, so that 1 / (2 * PI * SQRT (L * C) == 77.5kHz
+should be in the range of a few nF
+- connect the parallel circuit to the MIC input and MIC GND
+--> this works very well here about 500km from Frankfurt inside a building with fairly high noise level
+
+HARDWARE (Option 3 - about 10$ / €)
+- buy a DCF77 receive module and connect the output to the Teensy LINEIN
+--> this should be a bullet-proof solution, if you are inside the 2000km circle around Frankfurt
+
+SOFTWARE:
+- the Teensy audio board takes the MIC input signal and digitizes it with 176400ksps (so you are able to receive up to 88kHz)
+- that is a Direct Sampling Receiver like the really expensive and professional SDRs
+- the signal is bandpass-filtered around 77.5kHz
+- the signal is fed to a 256-point FFT for visual inspection AND for peak analysis in order to extract the time information bits
+- the signal is multiplied with a local oscillator working at 76900Hz
+- the signal is lowpass-filtered (however, the biquads are not very good at low frequencies, be careful here!)
+- you can hear the audio signal from DCF77 with a 600Hz tone (77500Hz-76900Hz)
+that´s the principle of a DC (direct conversion) receiver, I think
