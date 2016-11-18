@@ -11,7 +11,7 @@ HARDWARE (Option 2 - low budget < 5$/€)
 - ferrite rod with a few hundred windings --> measure inductance L
 - choose parallel capacitor with capacitance C, so that 1 / (2 * PI * SQRT (L * C) == 77.5kHz
 should be in the range of a few nF
-- connect the parallel circuit to the MIC input and MIC GND
+- connect the parallel circuit to the MIC input (via a 100nF cap to prevent MIC bias short circuit!) and MIC GND
 --> this works very well here about 500km from Frankfurt inside a building with fairly high noise level
 ![](https://github.com/DD4WH/Teensy-DCF77/blob/master/IMG_2183.JPG)
 HARDWARE (Option 3 - about 10$ / €)
