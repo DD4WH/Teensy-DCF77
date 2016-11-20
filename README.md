@@ -1,6 +1,8 @@
 # Teensy-DCF77
 
-Based on an idea by Frank Boesing
+https://de.wikipedia.org/wiki/DCF77
+
+Based on an idea by DD4WH / Frank Boesing
 ![](https://github.com/DD4WH/Teensy-DCF77/blob/master/IMG_2188.JPG)
 HARDWARE (Option 1 - very low budget < 1$/€):
 - a few meters of wire soldered to the MIC INPUT (optionally add a 100nF cap)
