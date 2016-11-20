@@ -37,9 +37,10 @@ The "BIN" of FFT-Data which corresponds to 77.5kHz is now used for the remaining
 
 
 AGC:
-The fft-bin-value is used to generate a very slow moving average. It gets compared against upper and lower constants. A too high value decreases the gain, a too low value increases it.
+The fft-bin-value is used to generate a very slow moving average. It is compared against upper and lower constants. A too high value decreases the gain, a too low value increases it.
 
 Decoding:
+A factor of 10 faster moving average is used to detect the bits. The signal is reduced to 25% at the beginning of a second for 100 or 200 milliseconds. These pauses result in a decreasing average value. A decreasing of more than 90ms is detected as a bit - if the duration is more than 150ms, it is "1", otherwise a "0". 
 
 
 
