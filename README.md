@@ -2,7 +2,7 @@
 
 https://de.wikipedia.org/wiki/DCF77
 
-Based on an idea by DD4WH / Frank Boesing
+Based on an idea by DD4WH and Frank Boesing
 ![](https://github.com/DD4WH/Teensy-DCF77/blob/master/IMG_2188.JPG)
 HARDWARE (Option 1 - very low budget < 1$/€):
 - a few meters of wire soldered to the MIC INPUT (optionally add a 100nF cap)
@@ -24,8 +24,23 @@ SOFTWARE:
 - the Teensy audio board takes the MIC input signal and digitizes it with 176400ksps (so you are able to receive up to 88kHz)
 - that is a Direct Sampling Receiver like the really expensive and professional SDRs
 - the signal is bandpass-filtered around 77.5kHz
-- the signal is fed to a 256-point FFT for visual inspection AND for peak analysis in order to extract the time information bits
+- the signal is fed to a 1024-point FFT for visual inspection AND for peak analysis in order to extract the time information bits
 - the signal is multiplied with a local oscillator working at 76900Hz
+that´s the principle of a DC (direct conversion) receiver, I think.
+
+Audio:
 - the signal is lowpass-filtered (however, the biquads are not very good at low frequencies, be careful here!)
 - you can hear the audio signal from DCF77 with a 600Hz tone (77500Hz-76900Hz)
-that´s the principle of a DC (direct conversion) receiver, I think
+
+
+The "BIN" of FFT-Data which corresponds to 77.5kHz is now used for the remaining steps:
+
+
+AGC:
+The fft-bin-value is used to generate a very slow moving average. It gets compared against upper and lower constants. A too high value decreases the gain, a too low value increases it.
+
+Decoding:
+
+
+
+
