@@ -100,7 +100,7 @@ const float bandpass_q = 10; // be careful when increasing Q, distortion can occ
 const float DCF77_FREQ = 77500.0; //DCF-77 77.65 kHz
 // start detecting at this frequency, so that
 // you can hear a 600Hz tone [77.5 - 76.9 = 0.6kHz]
-unsigned int freq_real = 76900; 
+unsigned int freq_real = DCF77_FREQ - 600; 
 
 //const unsigned int sample_rate = SAMPLE_RATE_176K;
 //unsigned int sample_rate_real = 176400;
