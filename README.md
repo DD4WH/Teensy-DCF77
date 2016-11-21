@@ -1,6 +1,6 @@
 # Teensy-DCF77
 
-Receive and decode atomic clock time signals from longwave station DCF77 on 77.5kHz with minimal hardware effort. Fully hackable for other longwave time signal stations around the world (LF below 96kHz).
+Receive and decode atomic clock time signals from longwave station DCF77 on 77.5kHz with minimal hardware effort (Teensy 3.x & audio board and very few external parts, see below). Fully hackable for other longwave time signal stations around the world (LF below 96kHz).
 
 https://de.wikipedia.org/wiki/DCF77
 
