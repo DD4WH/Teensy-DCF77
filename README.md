@@ -2,7 +2,9 @@
 
 https://de.wikipedia.org/wiki/DCF77
 
-Based on an idea by DD4WH and Frank Boesing
+Receive and decode atomic clock time signals from longwave station DCF77 on 77.5kHz with minimal hardware effort. Fully hackable for other longwave time signal stations around the world (LF below 96kHz).
+
+Based on an idea by Frank Boesing and DD4WH
 
 [![Teensy DCF77 video](http://img.youtube.com/vi/-SrumhKsAKk/0.jpg)](http://www.youtube.com/watch?v=-SrumhKsAKk)
 
