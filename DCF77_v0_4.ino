@@ -126,7 +126,6 @@ uint8_t minute1_old;
 uint8_t second10_old;
 uint8_t second1_old;
 uint8_t precision_flag = 0;
-int bit;
 
 const float displayscale = 2.5;
 
@@ -513,11 +512,11 @@ void displayPrecisionMessage() {
       }
 } // end function displayPrecisionMessage
 
-void decode(unsigned long t) {
+int decode(unsigned long t) {
   static uint64_t data = 0;
   static int sec = 0;
   static unsigned long tlastBit = 0;
-  //  int bit;
+  int bit;
 
   if ( millis() - tlastBit > 1600) {
     Serial.printf(" End Of Telegram. Data: 0x%llx %d Bits\n", data, sec);
@@ -543,33 +542,34 @@ void decode(unsigned long t) {
   if (sec > 59) { // just to prevent accidents with weak signals ;-)
     sec = 0;
   }
+  return bit;
 }
 
 
-void detectBit() {   
-  static float dcf_threshold_last = 1000; 
+void detectBit() {
+  static float dcf_threshold_last = 1000;
   static long secStart = 0;
-  
-  if ( dcf_threshold <= dcf_threshold_last) 
+
+  if ( dcf_threshold <= dcf_threshold_last)
   {
     if (secStart == 0) {
       secStart = millis();
-//      tft.fillRect(300, 10, 16, 16, ILI9341_RED);
+      //      tft.fillRect(300, 10, 16, 16, ILI9341_RED);
     }
-   }
+  }
 
   else {
     unsigned long t = millis() - secStart;
-    if ((secStart > 0) && (t > 90)) { 
-          decode(t);
-          tft.fillRect(291, 5, 18, 18, ILI9341_BLACK);
-          tft.setFont(Arial_12);
-          tft.setTextColor(ILI9341_WHITE);          
-          tft.setCursor(295, 8);
-          tft.print(bit);
+    if ((secStart > 0) && (t > 90)) {
+      int bit = decode(t);
+      tft.fillRect(291, 5, 18, 18, ILI9341_BLACK);
+      tft.setFont(Arial_12);
+      tft.setTextColor(ILI9341_WHITE);
+      tft.setCursor(295, 8);
+      tft.print(bit);
     }
-    secStart = 0;    
-//    tft.fillRect(300, 10, 16, 16, ILI9341_BLACK);
+    secStart = 0;
+    //    tft.fillRect(300, 10, 16, 16, ILI9341_BLACK);
   }
   dcf_threshold_last = dcf_threshold;
 }
