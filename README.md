@@ -1,10 +1,11 @@
 # Teensy-DCF77
 
+Receive and decode atomic clock time signals from longwave station DCF77 on 77.5kHz with minimal hardware effort. Fully hackable for other longwave time signal stations around the world (LF below 96kHz).
+
 https://de.wikipedia.org/wiki/DCF77
 
 https://www.ptb.de/cms/fileadmin/internet/fachabteilungen/abteilung_4/4.4_zeit_und_frequenz/4.42/dcf77.pdf
 
-Receive and decode atomic clock time signals from longwave station DCF77 on 77.5kHz with minimal hardware effort. Fully hackable for other longwave time signal stations around the world (LF below 96kHz).
 
 Based on an idea by Frank Boesing and DD4WH
 
