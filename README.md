@@ -3,7 +3,9 @@
 https://de.wikipedia.org/wiki/DCF77
 
 Based on an idea by DD4WH and Frank Boesing
-![](https://youtu.be/-SrumhKsAKk)
+
+[![Teensy DCF77 video](http://img.youtube.com/vi/-SrumhKsAKk/0.jpg)](http://www.youtube.com/watch?v=SrumhKsAKk)
+
 HARDWARE (Option 1 - very low budget < 1$/€):
 - a few meters of wire soldered to the MIC INPUT (optionally add a 100nF cap)
 - connect GND of the MIC input to a ground connection (the heating for example): NEVER EVER USE THE GND CONNECTION OF YOUR MAINS CONNECTOR! (Do not even think about that!)
