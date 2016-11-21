@@ -380,14 +380,14 @@ void prepare_spectrum_display() {
 void agc() {
   static long tspeed = millis(); //Timer for startup
 
-  const float speed_agc_start = 0.95;   //initial speed AGC
+  const float speed_agc_start = 0.995;   //initial speed AGC
   const float speed_agc_run   = 0.9995;
   static float speed_agc = speed_agc_start;
   static long tagc = millis(); //Timer for AGC
 
   const float speed_thr = 0.995;
 
-//  tft.drawFastHLine(14, 220 - dcf_med, 256, ILI9341_BLACK);
+  //  tft.drawFastHLine(14, 220 - dcf_med, 256, ILI9341_BLACK);
   tft.drawFastHLine(220, 220 - dcf_med, 46, ILI9341_BLACK);
   dcf_signal = (abs(myFFT.output[DCF_bin]) + abs(myFFT.output[DCF_bin + 1])) * displayscale;
   if (dcf_signal > 175) dcf_signal  = 175;
@@ -401,48 +401,46 @@ void agc() {
 
   long t = millis();
   //Slow down speed after a while
-  if ((t - tspeed > 1500) && (t - tspeed < 1530) ) {
+  if ((t - tspeed > 1500) && (t - tspeed < 3500) ) {
     if (speed_agc < speed_agc_run) {
       speed_agc = speed_agc_run;
       Serial.printf("Set AGC-Speed %f\n", speed_agc);
     }
   }
 
-  if (t - tagc > 2221) {
+  if ((t - tagc > 2221) || (speed_agc==speed_agc_start)) {
     tagc = t;
-    if (dcf_med > 160 && mic_gain > 30) {
+    if ((dcf_med > 160) && (mic_gain > 30)) {
       mic_gain--;
       set_mic_gain(mic_gain);
-      Serial.printf("Gain: %d\n", mic_gain);
+      Serial.printf("(Gain: %d)", mic_gain);
     }
-    else if (dcf_med < 100 && mic_gain < 58) {
+    if ((dcf_med < 100) && (mic_gain < 58)) {
       mic_gain++;
       set_mic_gain(mic_gain);
-      Serial.printf("Gain: %d\n", mic_gain);
+      Serial.printf("(Gain: %d)", mic_gain);
     }
   }
 }
 
 int getParity(uint32_t value) {
   int par = 0;
-
-  while(value) {
+  while (value) {
     value = value & (value - 1);
     par = ~par;
   }
-  return ~par & 1;
+  return par & 1;
 }
 
-
 int decodeTelegram(uint64_t telegram) {
-  uint8_t minute, hour, day, weekday, month, year; 
+  uint8_t minute, hour, day, weekday, month, year;
   int parity;
 
   //Plausibility checks and decoding telegram
-  //Example-Data: 0x8b47c14f468f9ec0ULL : 2016/11/20 
-  
-  //https://de.wikipedia.org/wiki/DCF77  
-  
+  //Example-Data: 0x8b47c14f468f9ec0ULL : 2016/11/20
+
+  //https://de.wikipedia.org/wiki/DCF77
+
   //TODO : more plausibility-checks to prevent false positives
 
   //right shift for convienience
@@ -453,47 +451,45 @@ int decodeTelegram(uint64_t telegram) {
     Serial.printf("1-Bit is 0\n");
     return 0;
   }
-  
+
   //1. decode date & date-parity-bit
   parity = telegram >> 58 & 0x01;
   year = ((telegram >> 54) & 0x0f) * 10 + ((telegram >> 50) & 0x0f);
   month = ((telegram >> 49) & 0x01) * 10 + ((telegram >> 45) & 0x0f);
   weekday = ((telegram >> 42) & 0x07);
   day = ((telegram >> 40) & 0x03) * 10 + ((telegram >> 36) & 0x0f);
-//  Serial.printf( "Date: %s, %d.%d.20%d P:%d %d", Days[weekday+1], day, month, year, parity, getParity( (telegram>>36) & 0x3ffff) );
-  
+  // Serial.printf( "\nDate: %s, %d.%d.20%d P:%d %d", Days[weekday+1], day, month, year, parity, getParity( (telegram >> 36) & 0x3fffff) );
+
   //Plausibility
-  if ((weekday==0) || (month==0) || (month>12) || (day==0) || (day>31) || (year < 16) ) {
+  if ( (getParity( (telegram >> 36) & 0x3fffff) != parity) || (weekday == 0) || (month == 0) || (month > 12) || (day == 0) || (day > 31) || (year < 16) ) {
     //Todo add check on 29.feb, 30/31 and more...
     Serial.printf(" is NOT plausible.\n");
     return 0;
   }
-  Serial.printf(" is plausible.\n");
 
   //2. decode time & date-parity-bit
   parity = telegram >> 35 & 0x01;
   hour = (telegram >> 33 & 0x03) * 10 + (telegram >> 29 & 0x0f);
-  Serial.printf( "Hour: %d P:%d %d\n", hour, parity, getParity( hour) );
-  if (hour>23) {
-    Serial.printf(" is NOT plausible.\n");
+  //Serial.printf( "Hour: %d P:%d %d\n", hour, parity, getParity( (telegram >> 29) & 0x3f)  );
+  if ( (getParity( (telegram >> 29) & 0x3f) != parity) || hour > 23) {
+    Serial.printf("Hour %d is NOT plausible.\n", hour);
     return 0;
   }
-  Serial.printf(" is plausible.\n");
-  
+
   parity = telegram >> 28 & 0x01;
   minute = (telegram >> 25 & 0x07) * 10 + (telegram >> 21 & 0x0f);
-  Serial.printf( "Minute: %d P:%d %d\n", minute, parity, getParity( minute ) );
-  if (minute>59) {
-    Serial.printf(" is NOT plausible.\n");
+  //Serial.printf( "Minute: %d P:%d %d\n", minute, parity, getParity( (telegram >> 21) & 0x7f ) );
+  if ( (getParity( (telegram >> 21) & 0x7f ) != parity) || minute > 59) {
+    Serial.printf("Minute %d is NOT plausible.\n", minute);
     return 0;
   }
-  Serial.printf(" is plausible.\n");
+  Serial.printf("Time: %d:%d\n", hour, minute);
 
   //All data seem to be ok.
   //TODO: Set & display Date and Time ...
-      setTime (hour, minute, 0, day, month, year);      
-      Teensy3Clock.set(now()); 
-      displayDate();
+  setTime (hour, minute, 0, day, month, year);
+  Teensy3Clock.set(now());
+  displayDate();
   return 1;
 }
 
@@ -521,35 +517,34 @@ void decode(unsigned long t) {
   static uint64_t data = 0;
   static int sec = 0;
   static unsigned long tlastBit = 0;
-//  int bit;
-  
-  if ( millis() - tlastBit > 1600) {          
-    Serial.printf(" End Of Telegram. Data: 0x%llx %d\n", data, sec);  
-       tft.fillRect(14, 54, 59 * 5, 3, ILI9341_BLACK); 
+  //  int bit;
+
+  if ( millis() - tlastBit > 1600) {
+    Serial.printf(" End Of Telegram. Data: 0x%llx %d Bits\n", data, sec);
+    tft.fillRect(14, 54, 59 * 5, 3, ILI9341_BLACK);
     if (sec == 59) {
-       precision_flag = decodeTelegram(data);
-       displayPrecisionMessage();
+      precision_flag = decodeTelegram(data);
+      displayPrecisionMessage();
     }
-    
-    sec = 0;        
+
+    sec = 0;
     data = 0;
-  } 
-  tlastBit = millis();
-    
-  if (t > 150) {
-     bit = 1;
   }
-  else bit = 0;
+  tlastBit = millis();
+
+  bit = (t > 150) ? 1 : 0;
   Serial.print(bit);
+
   // plot horizontal bar
-  tft.fillRect(14 + 5 * sec, 54, 3, 3, ILI9341_YELLOW);
+  tft.fillRect(14 + 5 * sec, 54, 3, 3, bit ? ILI9341_YELLOW : ILI9341_PURPLE);
   data = ( data >> 1) | ((uint64_t)bit << 63);
-  
-  sec++;  
+
+  sec++;
   if (sec > 59) { // just to prevent accidents with weak signals ;-)
     sec = 0;
   }
 }
+
 
 void detectBit() {   
   static float dcf_threshold_last = 1000; 
