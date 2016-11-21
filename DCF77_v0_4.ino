@@ -9,7 +9,7 @@
     
     https://github.com/DD4WH/Teensy-DCF77/wiki
 */
-#define VERSION     " v0.4"
+#define VERSION     " v0.41"
 /*
    Permission is hereby granted, free of charge, to any person obtaining a copy
    of this software and associated documentation files (the "Software"), to deal
