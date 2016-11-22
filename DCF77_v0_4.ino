@@ -45,8 +45,8 @@ time_t getTeensy3Time()
   return Teensy3Clock.get();
 }
 
-#include <FlexiBoard.h>
-/*
+//#include <FlexiBoard.h>
+
   #define BACKLIGHT_PIN
   #define TFT_DC      20
   #define TFT_CS      21
@@ -54,7 +54,7 @@ time_t getTeensy3Time()
   #define TFT_MOSI     7
   #define TFT_SCLK    14
   #define TFT_MISO    12
-*/
+
 ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCLK, TFT_MISO);
 
 #define SAMPLE_RATE_MIN               0
@@ -186,8 +186,8 @@ void setup() {
   sgtl5000_1.adcHighPassFilterDisable(); // does not help too much!
 
   // Init TFT display
-  //  pinMode( BACKLIGHT_PIN, OUTPUT );
-  //  analogWrite( BACKLIGHT_PIN, 1023 );
+  pinMode( BACKLIGHT_PIN, OUTPUT );
+  analogWrite( BACKLIGHT_PIN, 1023 );
   tft.begin();
   tft.setRotation( 3 );
   tft.fillScreen(ILI9341_BLACK);
