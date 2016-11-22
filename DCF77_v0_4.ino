@@ -4,12 +4,12 @@
     Teensy DCF77 Receiver & Real Time Clock
 
     uses only minimal hardware to receive accurate time signals
-    
+
     For information on how to setup the antenna, see here:
-    
+
     https://github.com/DD4WH/Teensy-DCF77/wiki
 */
-#define VERSION     " v0.41"
+#define VERSION     " v0.42"
 /*
    Permission is hereby granted, free of charge, to any person obtaining a copy
    of this software and associated documentation files (the "Software"), to deal
@@ -41,20 +41,20 @@
 #include "font_Arial.h"
 
 time_t getTeensy3Time()
-  {
+{
   return Teensy3Clock.get();
-  }
+}
 
-//#include <FlexiBoard.h>
-
-  #define BACKLIGHT_PIN 0
+#include <FlexiBoard.h>
+/*
+  #define BACKLIGHT_PIN
   #define TFT_DC      20
   #define TFT_CS      21
   #define TFT_RST     32  // 255 = unused. connect to 3.3V
   #define TFT_MOSI     7
   #define TFT_SCLK    14
   #define TFT_MISO    12
-
+*/
 ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCLK, TFT_MISO);
 
 #define SAMPLE_RATE_MIN               0
@@ -95,12 +95,12 @@ Metro second_timer = Metro(1000);
 const uint16_t FFT_points = 1024;
 //const uint16_t FFT_points = 256;
 
-int8_t mic_gain = 45 ;//start detecting with this MIC_GAIN in dB
+int8_t mic_gain = 38 ;//start detecting with this MIC_GAIN in dB
 const float bandpass_q = 10; // be careful when increasing Q, distortion can occur with higher Q because of fixed point 16bit math in the biquads
 const float DCF77_FREQ = 77500.0; //DCF-77 77.65 kHz
 // start detecting at this frequency, so that
 // you can hear a 600Hz tone [77.5 - 76.9 = 0.6kHz]
-unsigned int freq_real = DCF77_FREQ - 600; 
+unsigned int freq_real = DCF77_FREQ - 600;
 
 //const unsigned int sample_rate = SAMPLE_RATE_176K;
 //unsigned int sample_rate_real = 176400;
@@ -110,15 +110,15 @@ unsigned int sample_rate_real = 192000;
 
 unsigned int freq_LO = 7000;
 float dcf_signal = 0;
-float dcf_threshold = 100;
-float dcf_med = 100;
+float dcf_threshold = 0;
+float dcf_med = 0;
 unsigned int DCF_bin;// this is the FFT bin where the 77.5kHz signal is
 
 bool timeflag = 0;
 const int8_t pos_x_date = 14;
 const int8_t pos_y_date = 68;
 const int8_t pos_x_time = 14;
-const int8_t pos_y_time = 110;
+const int8_t pos_y_time = 114;
 uint8_t hour10_old;
 uint8_t hour1_old;
 uint8_t minute10_old;
@@ -126,6 +126,8 @@ uint8_t minute1_old;
 uint8_t second10_old;
 uint8_t second1_old;
 uint8_t precision_flag = 0;
+int8_t mesz = -1;
+int8_t mesz_old = 0;
 
 const float displayscale = 2.5;
 
@@ -170,7 +172,7 @@ void loop();
 void setup() {
 
   Serial.begin(115200);
-  
+
   setSyncProvider(getTeensy3Time);
 
   // Audio connections require memory.
@@ -184,8 +186,8 @@ void setup() {
   sgtl5000_1.adcHighPassFilterDisable(); // does not help too much!
 
   // Init TFT display
-  pinMode( BACKLIGHT_PIN, OUTPUT );
-  analogWrite( BACKLIGHT_PIN, 1023 );
+  //  pinMode( BACKLIGHT_PIN, OUTPUT );
+  //  analogWrite( BACKLIGHT_PIN, 1023 );
   tft.begin();
   tft.setRotation( 3 );
   tft.fillScreen(ILI9341_BLACK);
@@ -194,11 +196,11 @@ void setup() {
   tft.setFont(Arial_12);
   tft.print("Teensy DCF77 Receiver "); tft.print(VERSION);
   tft.setTextColor(ILI9341_WHITE);
-//  display_settings();
+  //  display_settings();
 
   set_sample_rate (sample_rate);
   set_freq_LO (freq_real);
-//  decodeTelegram( 0x8b47c0501a821b80ULL ); 
+  //  decodeTelegram( 0x8b47c0501a821b80ULL );
   displayDate();
   displayClock();
   displayPrecisionMessage();
@@ -207,7 +209,7 @@ void setup() {
 
 void loop() {
 
-  if (myFFT.available()) 
+  if (myFFT.available())
   {
     agc();
     detectBit();
@@ -221,7 +223,7 @@ void set_mic_gain(int8_t gain) {
   // AudioNoInterrupts();
   sgtl5000_1.micGain (mic_gain);
   // AudioInterrupts();
-//  display_settings();
+  //  display_settings();
 } // end function set_mic_gain
 
 void       set_freq_LO(int freq) {
@@ -239,7 +241,7 @@ void       set_freq_LO(int freq) {
   AudioNoInterrupts();
   sine1.frequency(freq_LO);
   AudioInterrupts();
-//  display_settings();
+  //  display_settings();
 } // END of function set_freq_LO
 
 void      display_settings() {
@@ -315,7 +317,7 @@ void      set_sample_rate (int sr) {
   DCF_bin = round((DCF77_FREQ / (sample_rate_real / 2.0)) * (FFT_points / 2));
   Serial.print("DCF77_bin number: "); Serial.println(DCF_bin);
 
-//  display_settings();
+  //  display_settings();
   prepare_spectrum_display();
 
 } // END function set_sample_rate
@@ -377,12 +379,12 @@ void prepare_spectrum_display() {
 
 
 void agc() {
-  static long tspeed = millis(); //Timer for startup
+  static unsigned long tspeed = millis(); //Timer for startup
 
   const float speed_agc_start = 0.995;   //initial speed AGC
   const float speed_agc_run   = 0.9995;
   static float speed_agc = speed_agc_start;
-  static long tagc = millis(); //Timer for AGC
+  static unsigned long tagc = millis(); //Timer for AGC
 
   const float speed_thr = 0.995;
 
@@ -398,7 +400,7 @@ void agc() {
   dcf_threshold = (1 - speed_thr) * dcf_signal + speed_thr * dcf_threshold;
   tft.drawFastHLine(220, 220 - dcf_threshold, 46, ILI9341_GREEN);
 
-  long t = millis();
+  unsigned long t = millis();
   //Slow down speed after a while
   if ((t - tspeed > 1500) && (t - tspeed < 3500) ) {
     if (speed_agc < speed_agc_run) {
@@ -407,7 +409,7 @@ void agc() {
     }
   }
 
-  if ((t - tagc > 2221) || (speed_agc==speed_agc_start)) {
+  if ((t - tagc > 2221) || (speed_agc == speed_agc_start)) {
     tagc = t;
     if ((dcf_med > 160) && (mic_gain > 30)) {
       mic_gain--;
@@ -431,8 +433,9 @@ int getParity(uint32_t value) {
   return par & 1;
 }
 
+
 int decodeTelegram(uint64_t telegram) {
-  uint8_t minute, hour, day, weekday, month, year;
+  uint16_t minute, hour, day, weekday, month, year, v10;
   int parity;
 
   //Plausibility checks and decoding telegram
@@ -442,50 +445,62 @@ int decodeTelegram(uint64_t telegram) {
 
   //TODO : more plausibility-checks to prevent false positives
 
-  //right shift for convienience
-  telegram = telegram >> 5;
+  //Check fixed - bits:
+  if ( ((telegram & 1) != 0) || ((telegram >> 20) & 1) == 0) {
+    Serial.println("Fixed-Bit error\n");
+    return 0;
+  }
 
-  //Check 1-Bit:
-  if ((telegram >> 20) == 0) {
-    Serial.printf("1-Bit is 0\n");
+  //MESZ Central European Summer Time ?
+  mesz = (telegram >> 17) & 1;
+  if ( mesz != (~(telegram >> 18) & 1) ) {
+    Serial.println("MESZ-Bit error\n");
     return 0;
   }
 
   //1. decode date & date-parity-bit
   parity = telegram >> 58 & 0x01;
+  if (getParity( (telegram >> 36) & 0x3fffff) != parity) return 0;
   year = ((telegram >> 54) & 0x0f) * 10 + ((telegram >> 50) & 0x0f);
-  month = ((telegram >> 49) & 0x01) * 10 + ((telegram >> 45) & 0x0f);
+  if (year < 16) return 0;
+
+  month = ((telegram >> 45) & 0x0f);
+  if (month > 9) return 0;
+
+  month = ((telegram >> 49) & 0x01) * 10 + month;
+  if ((month == 0) || (month > 12)) return 0;
+
   weekday = ((telegram >> 42) & 0x07);
-  day = ((telegram >> 40) & 0x03) * 10 + ((telegram >> 36) & 0x0f);
-  // Serial.printf( "\nDate: %s, %d.%d.20%d P:%d %d", Days[weekday+1], day, month, year, parity, getParity( (telegram >> 36) & 0x3fffff) );
+  if (weekday == 0) return 0;
 
-  //Plausibility
-  if ( (getParity( (telegram >> 36) & 0x3fffff) != parity) || (weekday == 0) || (month == 0) || (month > 12) || (day == 0) || (day > 31) || (year < 16) ) {
-    //Todo add check on 29.feb, 30/31 and more...
-    Serial.printf(" is NOT plausible.\n");
-    return 0;
-  }
+  day = ((telegram >> 36) & 0x0f);
+  if (day > 9) return 0;
+  day = ((telegram >> 40) & 0x03) * 10 + day;
+  if ( (day == 0) || (day > 31) ) return 0;//Todo add check on 29.feb, 30/31 and more...
 
-  //2. decode time & date-parity-bit
+
+  //2. decode time & parity-bit
   parity = telegram >> 35 & 0x01;
-  hour = (telegram >> 33 & 0x03) * 10 + (telegram >> 29 & 0x0f);
-  //Serial.printf( "Hour: %d P:%d %d\n", hour, parity, getParity( (telegram >> 29) & 0x3f)  );
-  if ( (getParity( (telegram >> 29) & 0x3f) != parity) || hour > 23) {
-    Serial.printf("Hour %d is NOT plausible.\n", hour);
-    return 0;
-  }
+  if  (getParity( (telegram >> 29) & 0x3f) != parity) return 0;
+  hour = (telegram >> 29 & 0x0f);
+  if (hour > 9) return 0;
+  v10 = (telegram >> 33 & 0x03);
+  if (v10 > 2) return 0;
+  hour = v10 * 10 + hour;
+  if (hour > 23) return 0;
 
   parity = telegram >> 28 & 0x01;
-  minute = (telegram >> 25 & 0x07) * 10 + (telegram >> 21 & 0x0f);
-  //Serial.printf( "Minute: %d P:%d %d\n", minute, parity, getParity( (telegram >> 21) & 0x7f ) );
-  if ( (getParity( (telegram >> 21) & 0x7f ) != parity) || minute > 59) {
-    Serial.printf("Minute %d is NOT plausible.\n", minute);
-    return 0;
-  }
-  Serial.printf("Time: %d:%d\n", hour, minute);
+  if (getParity( (telegram >> 21) & 0x7f ) != parity) return 0;
+  minute = (telegram >> 21 & 0x0f);
+  if (minute > 9) return 0;
+  v10 = (telegram >> 25 & 0x07);
+  if (v10 > 5) return 0;
+  minute = v10 * 10 + minute;
+  if (minute > 59) return 0;
+
 
   //All data seem to be ok.
-  //TODO: Set & display Date and Time ...
+  Serial.printf("Time set: %d.%d.20%d %d:%02d %s\n", day, month, year, hour, minute, mesz ? "MESZ" : "MEZ");
   setTime (hour, minute, 0, day, month, year);
   Teensy3Clock.set(now());
   displayDate();
@@ -493,23 +508,23 @@ int decodeTelegram(uint64_t telegram) {
 }
 
 void displayPrecisionMessage() {
-      if (precision_flag) {
-          tft.fillRect(14, 32, 300, 18, ILI9341_BLACK);
-          tft.setCursor(14, 32);
-          tft.setFont(Arial_11);
-          tft.setTextColor(ILI9341_GREEN);          
-          tft.print("Full precision of time and date");
-          tft.drawRect(290, 4, 20, 20, ILI9341_GREEN);
-      }
-      else
-      {
-          tft.fillRect(14, 32, 300, 18, ILI9341_BLACK);
-          tft.setCursor(14, 32);
-          tft.setFont(Arial_11);
-          tft.setTextColor(ILI9341_RED);          
-          tft.print("Unprecise, trying to collect data");
-          tft.drawRect(290, 4, 20, 20, ILI9341_RED);
-      }
+  if (precision_flag) {
+    tft.fillRect(14, 32, 300, 18, ILI9341_BLACK);
+    tft.setCursor(14, 32);
+    tft.setFont(Arial_11);
+    tft.setTextColor(ILI9341_GREEN);
+    tft.print("Full precision of time and date");
+    tft.drawRect(290, 4, 20, 20, ILI9341_GREEN);
+  }
+  else
+  {
+    tft.fillRect(14, 32, 300, 18, ILI9341_BLACK);
+    tft.setCursor(14, 32);
+    tft.setFont(Arial_11);
+    tft.setTextColor(ILI9341_RED);
+    tft.print("Unprecise, trying to collect data");
+    tft.drawRect(290, 4, 20, 20, ILI9341_RED);
+  }
 } // end function displayPrecisionMessage
 
 int decode(unsigned long t) {
@@ -517,8 +532,10 @@ int decode(unsigned long t) {
   static int sec = 0;
   static unsigned long tlastBit = 0;
   int bit;
+  unsigned long m;
 
-  if ( millis() - tlastBit > 1600) {
+  m = millis();
+  if ( m - tlastBit > 1600) {
     Serial.printf(" End Of Telegram. Data: 0x%llx %d Bits\n", data, sec);
     tft.fillRect(14, 54, 59 * 5, 3, ILI9341_BLACK);
     if (sec == 59) {
@@ -529,14 +546,14 @@ int decode(unsigned long t) {
     sec = 0;
     data = 0;
   }
-  tlastBit = millis();
+  tlastBit = m;
 
   bit = (t > 150) ? 1 : 0;
   Serial.print(bit);
 
   // plot horizontal bar
   tft.fillRect(14 + 5 * sec, 54, 3, 3, bit ? ILI9341_YELLOW : ILI9341_PURPLE);
-  data = ( data >> 1) | ((uint64_t)bit << 63);
+  data = ( data >> 1) | ((uint64_t)bit << 58);
 
   sec++;
   if (sec > 59) { // just to prevent accidents with weak signals ;-)
@@ -545,16 +562,14 @@ int decode(unsigned long t) {
   return bit;
 }
 
-
 void detectBit() {
   static float dcf_threshold_last = 1000;
-  static long secStart = 0;
+  static unsigned long secStart = 0;
 
   if ( dcf_threshold <= dcf_threshold_last)
   {
     if (secStart == 0) {
       secStart = millis();
-      //      tft.fillRect(300, 10, 16, 16, ILI9341_RED);
     }
   }
 
@@ -562,6 +577,7 @@ void detectBit() {
     unsigned long t = millis() - secStart;
     if ((secStart > 0) && (t > 90)) {
       int bit = decode(t);
+      
       tft.fillRect(291, 5, 18, 18, ILI9341_BLACK);
       tft.setFont(Arial_12);
       tft.setTextColor(ILI9341_WHITE);
@@ -569,7 +585,6 @@ void detectBit() {
       tft.print(bit);
     }
     secStart = 0;
-    //    tft.fillRect(300, 10, 16, 16, ILI9341_BLACK);
   }
   dcf_threshold_last = dcf_threshold;
 }
@@ -669,75 +684,87 @@ void check_processor() {
 
 void displayClock() {
 
-      uint8_t hour10 = hour ()/10%10;
-      uint8_t hour1 = hour()%10;
-      uint8_t minute10 = minute()/10%10;
-      uint8_t minute1 = minute()%10;
-      uint8_t second10 = second()/10%10;
-      uint8_t second1 = second()%10;
-      uint8_t time_pos_shift = 26;
-      tft.setFont(Arial_28);
-      tft.setTextColor(ILI9341_WHITE);
-      uint8_t dp = 14;
+  uint8_t hour10 = hour() / 10 % 10;
+  uint8_t hour1 = hour() % 10;
+  uint8_t minute10 = minute() / 10 % 10;
+  uint8_t minute1 = minute() % 10;
+  uint8_t second10 = second() / 10 % 10;
+  uint8_t second1 = second() % 10;
+  uint8_t time_pos_shift = 26;
+  tft.setFont(Arial_28);
+  tft.setTextColor(ILI9341_WHITE);
+  uint8_t dp = 14;
 
-// set up ":" for time display        
-      if (!timeflag) {
-      tft.setCursor(pos_x_time + 2 * time_pos_shift, pos_y_time);
-      tft.print(":");
-      tft.setCursor(pos_x_time + 4 * time_pos_shift + dp, pos_y_time);
-      tft.print(":");
-      tft.setCursor(pos_x_time + 7 * time_pos_shift + 2*dp, pos_y_time);
-//      tft.print("UTC");
-      }
+  if (mesz != mesz_old && mesz >= 0) {
+    tft.setTextColor(ILI9341_ORANGE);
+    tft.setFont(Arial_16);    
+    tft.setCursor(pos_x_date, pos_y_date+20);
+    tft.fillRect(pos_x_date, pos_y_date+20, 150-pos_x_date, 20, ILI9341_BLACK);
+    tft.printf((mesz==0)?"(CET)":"(CEST)");
+  }
 
-      if (hour10 != hour10_old || !timeflag) {
-             tft.setCursor(pos_x_time, pos_y_time);
-             tft.fillRect(pos_x_time, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);             
-             if (hour10) tft.print(hour10);  // do not display, if zero   
-        }
-      if (hour1 != hour1_old || !timeflag) {
-             tft.setCursor(pos_x_time + time_pos_shift, pos_y_time);
-             tft.fillRect(pos_x_time  + time_pos_shift, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);             
-             tft.print(hour1);  // always display   
-        }
-      if (minute1 != minute1_old || !timeflag) {
-             tft.setCursor(pos_x_time + 3 * time_pos_shift + dp, pos_y_time);
-             tft.fillRect(pos_x_time  + 3 * time_pos_shift + dp, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);             
-             tft.print(minute1);  // always display   
-        }
-      if (minute10 != minute10_old || !timeflag) {
-             tft.setCursor(pos_x_time + 2 * time_pos_shift + dp, pos_y_time);
-             tft.fillRect(pos_x_time  + 2 * time_pos_shift + dp, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);             
-             tft.print(minute10);  // always display   
-        }
-      if (second10 != second10_old || !timeflag) {
-             tft.setCursor(pos_x_time + 4 * time_pos_shift + 2*dp, pos_y_time);
-             tft.fillRect(pos_x_time  + 4 * time_pos_shift + 2*dp, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);             
-             tft.print(second10);  // always display   
-        }
-      if (second1 != second1_old || !timeflag) {
-             tft.setCursor(pos_x_time + 5 * time_pos_shift + 2*dp, pos_y_time);
-             tft.fillRect(pos_x_time  + 5 * time_pos_shift + 2*dp, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);             
-             tft.print(second1);  // always display   
-        }
+  tft.setFont(Arial_28);
+  tft.setTextColor(ILI9341_WHITE);
 
-      hour1_old = hour1;
-      hour10_old = hour10;
-      minute1_old = minute1;
-      minute10_old = minute10;
-      second1_old = second1;
-      second10_old = second10;
-      timeflag = 1;
+  // set up ":" for time display
+  if (!timeflag) {
+    tft.setCursor(pos_x_time + 2 * time_pos_shift, pos_y_time);
+    tft.print(":");
+    tft.setCursor(pos_x_time + 4 * time_pos_shift + dp, pos_y_time);
+    tft.print(":");
+    tft.setCursor(pos_x_time + 7 * time_pos_shift + 2 * dp, pos_y_time);
+    //      tft.print("UTC");
+  }
+
+  if (hour10 != hour10_old || !timeflag) {
+    tft.setCursor(pos_x_time, pos_y_time);
+    tft.fillRect(pos_x_time, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);
+    if (hour10) tft.print(hour10);  // do not display, if zero
+  }
+  if (hour1 != hour1_old || !timeflag) {
+    tft.setCursor(pos_x_time + time_pos_shift, pos_y_time);
+    tft.fillRect(pos_x_time  + time_pos_shift, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);
+    tft.print(hour1);  // always display
+  }
+  if (minute1 != minute1_old || !timeflag) {
+    tft.setCursor(pos_x_time + 3 * time_pos_shift + dp, pos_y_time);
+    tft.fillRect(pos_x_time  + 3 * time_pos_shift + dp, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);
+    tft.print(minute1);  // always display
+  }
+  if (minute10 != minute10_old || !timeflag) {
+    tft.setCursor(pos_x_time + 2 * time_pos_shift + dp, pos_y_time);
+    tft.fillRect(pos_x_time  + 2 * time_pos_shift + dp, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);
+    tft.print(minute10);  // always display
+  }
+  if (second10 != second10_old || !timeflag) {
+    tft.setCursor(pos_x_time + 4 * time_pos_shift + 2 * dp, pos_y_time);
+    tft.fillRect(pos_x_time  + 4 * time_pos_shift + 2 * dp, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);
+    tft.print(second10);  // always display
+  }
+  if (second1 != second1_old || !timeflag) {
+    tft.setCursor(pos_x_time + 5 * time_pos_shift + 2 * dp, pos_y_time);
+    tft.fillRect(pos_x_time  + 5 * time_pos_shift + 2 * dp, pos_y_time, time_pos_shift, time_pos_shift + 2, ILI9341_BLACK);
+    tft.print(second1);  // always display
+  }
+
+  hour1_old = hour1;
+  hour10_old = hour10;
+  minute1_old = minute1;
+  minute10_old = minute10;
+  second1_old = second1;
+  second10_old = second10;
+  mesz_old = mesz;
+  timeflag = 1;
 
 } // end function displayTime
 
 void displayDate() {
-  char string99 [20]; 
-  tft.fillRect(pos_x_date, pos_y_date, 320-pos_x_date, 20, ILI9341_BLACK); // erase old string
+  char string99 [20];
+  tft.fillRect(pos_x_date, pos_y_date, 320 - pos_x_date, 20, ILI9341_BLACK); // erase old string
   tft.setTextColor(ILI9341_ORANGE);
   tft.setFont(Arial_16);
   tft.setCursor(pos_x_date, pos_y_date);
-//  Date: %s, %d.%d.20%d P:%d %d", Days[weekday-1], day, month, year
-  sprintf(string99,"%s, %02d.%02d.%04d", Days[weekday()], day(),month(),year());
+  //  Date: %s, %d.%d.20%d P:%d %d", Days[weekday-1], day, month, year
+  sprintf(string99, "%s, %02d.%02d.%04d", Days[weekday()], day(), month(), year());
   tft.print(string99);
 } // end function displayDate
