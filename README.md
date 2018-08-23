@@ -30,7 +30,7 @@ HARDWARE (Option 3 - about 10$ / €)
 --> this should be a bullet-proof solution, if you are inside the 2000km circle around Frankfurt
 
 SOFTWARE:
-- the Teensy audio board takes the MIC input signal and digitizes it with 176400ksps (so you are able to receive up to 88kHz)
+- the Teensy audio board takes the MIC input signal and digitizes it with 192ksps (so you are able to receive up to 96kHz)
 - that is a Direct Sampling Receiver like the really expensive and professional SDRs
 - the signal is bandpass-filtered around 77.5kHz
 - the signal is fed to a 1024-point FFT for visual inspection AND for peak analysis in order to extract the time information bits
